@@ -1,6 +1,6 @@
 ## =============================================================
 ## 5_figures.R
-## Figures for the log(CPD)-based manuscript, drawn at print size
+## Figures 1-4, drawn at print size
 ## (6.5 in wide), 600 dpi. No grey: blue = significantly steeper than
 ## average / main series, red = significantly shallower, black = not
 ## significant or neutral marks. Run after 3_scaling_checks.R.

@@ -9,13 +9,9 @@ suppressMessages({library(data.table); library(plm); library(lmtest); library(sa
 source("config.R")
 
 ## ---------- scale invariance (Table 6)
-## =============================================================
-## 11_scale_invariance.R
 ## For each subject area and publisher: direction of its deviation
 ## from the average slope (BH q < .05) under each of the five scalings,
 ## and a summary of which conclusions hold under all of them.
-## Run after 09_logcpd_models.R.
-## =============================================================
 logs <- c("log(CPD), CPD > 0", "log(CPD + 0.1)", "asinh(CPD)", "log(1 + CPD)")
 for (k in c("field", "pub")) {
   d <- fread(O(sprintf("lc_%s_dev_by_scaling.csv", k)))
@@ -58,7 +54,6 @@ jsonlite::write_json(x, O("lc_numbers.json"), auto_unbox = TRUE, digits = 10)
 cat("ref obs share", d[, mean(big == 0)], "\n")
 
 ## ---------- converted elasticities (Figure 3)
-## 12_converted_elasticity.R  (run after 09_logcpd_models.R and 11_scale_invariance.R)
 ## Convert each group's log(1+CPD), asinh and raw slopes to elasticities at the group's own CPD,
 ## and compare with the log(CPD) slopes. Tests whether scale dependence is the transformation's derivative.
 d0 <- readRDS(O("model_dt.rds")); fv <- grep("^field_", names(d0), value = TRUE)
@@ -100,7 +95,6 @@ jsonlite::write_json(list(cpd_2005 = yr[year == 2005, mean_cpd], cpd_2025 = yr[y
   big_conv_asinh_ref = cb["asinh", "ref"], big_conv_asinh_named = cb["asinh", "named"]), O("lc_conv_numbers.json"), auto_unbox = TRUE, digits = 10)
 
 ## ---------- descriptives (Table 2)
-## 13_descriptives_logcpd.R  (run after 09_logcpd_models.R and 11_scale_invariance.R)
 d0 <- readRDS(O("model_dt.rds")); d <- d0[cpd_l1 > 0]
 
 v <- list(SJR = exp(d$log_sjr) - 0.001, Documents = d$docs_l1, CPD = d$cpd_l1, RPD = d$rpd_l1, NYears = d$nyears_l1)
@@ -123,17 +117,13 @@ res$zero_ah <- d0[field_Arts.and.Humanities == 1, mean(cpd_l1 == 0)]
 jsonlite::write_json(res, O("lc_desc_numbers.json"), auto_unbox = TRUE, digits = 10)
 
 ## ---------- same-sample comparison and converted elasticities with SEs
-## =============================================================
-## 16_review_checks.R
-## Responses to review comments:
+## Additional checks:
 ##  (1) elasticity of SJR itself vs. of SJR + 0.001 (outcome constant)
 ##  (2) all five scalings on the SAME positive-CPD sample, so that scaling
 ##      is separated from sample composition (zeros)
 ##  (3) converted elasticities with standard errors, computed by averaging
 ##      observation-level elasticities (handles multi-field journals),
 ##      and confidence intervals for the agreement correlations
-## Run after 09_logcpd_models.R.
-## =============================================================
 src <- readLines("2_models.R")
 cut <- grep("^## ---------- A. scaling comparison", src)[1] - 1
 src <- src[seq_len(cut)]; src <- src[!grepl("sink\\(|log_con", src)]

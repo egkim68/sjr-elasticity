@@ -1,6 +1,6 @@
 ## =============================================================
 ## 2_models.R
-## Main estimates for the revised manuscript, re-based on log(CPD).
+## Main estimates, based on log(CPD).
 ##
 ## Why: the slope on log(1 + CPD) is not the elasticity of SJR with
 ## respect to CPD. d log SJR / d log CPD = b * CPD / (1 + CPD), which
@@ -15,8 +15,9 @@
 ##   B  M1-M4 (journal + year FE), Mundlak tests, persistence
 ##   C  field (M5) and publisher (M6, M6 + fields) deviations
 ##   D  robustness of the citation elasticity
-##   E  between-journal elasticity on journal means (Section 2.4)
+##   E  between-journal elasticity on journal means (Section 2.6)
 ##   F  sample including journals indexed from 1996 or earlier
+##   G  journal size: field and publisher deviations net of size
 ## Run after 1_build_panel.R.
 ## =============================================================
 suppressMessages({library(data.table); library(plm); library(lmtest); library(sandwich); library(stringr)})
@@ -179,7 +180,7 @@ rob_tab <- rbindlist(rob); print(rob_tab, digits = 4); fwrite(rob_tab, O("lc_tab
 d[, late := as.integer(year >= 2015)]; lt <- ct(fe(log_sjr ~ ldocs + lcpd + lcpd:late))
 put("late_int", lt["lcpd:late", 1]); put("late_int_se", lt["lcpd:late", 2]); put("late_int_p", lt["lcpd:late", 4])
 
-## ---------- E. between-journal elasticity (Section 2.4) -----------------
+## ---------- E. between-journal elasticity (Section 2.6) -----------------
 be <- d[, c(list(log_sjr = mean(log_sjr), ldocs = mean(ldocs), nyears = mean(nyears_l1), lcpd = mean(lcpd)),
                  lapply(.SD, max)), by = src_id, .SDcols = fv]
 fld <- paste(fv, collapse = " + ")
