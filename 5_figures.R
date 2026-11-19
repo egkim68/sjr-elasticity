@@ -10,7 +10,9 @@ source("config.R")
 FIG <- "figures"; dir.create(FIG, showWarnings = FALSE)
 BLUE <- "#1F5FA8"; RED <- "#B8323A"; INK <- "#000000"; GREEN <- "#2E7D32"; PURPLE <- "#6A3D9A"
 W <- 6.5; DPI <- 800
-th <- theme_minimal(base_size = 10.5) +
+FONT <- "Arial"   # Springer: Helvetica or Arial lettering
+update_geom_defaults("text", list(family = FONT)); update_geom_defaults("label", list(family = FONT))
+th <- theme_minimal(base_size = 10.5, base_family = FONT) +
   theme(panel.grid = element_blank(), axis.line = element_line(color = INK, linewidth = 0.45),
         axis.ticks = element_line(color = INK, linewidth = 0.45), axis.ticks.length = unit(3, "pt"),
         axis.text = element_text(color = INK, size = 10), axis.title = element_text(color = INK, size = 10.5),
@@ -31,9 +33,9 @@ r <- function(s, c) rob[spec == s][[c]]
 f1 <- data.table(
   lab = c("M2 Performance", "M3 Extended", "M5 Field (sample average)", "M6 Publisher (sample average)",
           "M4 Dynamic (short-run)", "CPD lagged three years"),
-  est = c(g("M2", "lcpd", "est"), g("M3", "lcpd", "est"), num$avg5, num$avg7, g("M4", "lcpd", "est"),
+  est = c(g("M2", "lcpd", "est"), g("M3", "lcpd", "est"), num$avg5, num$avg6, g("M4", "lcpd", "est"),
           r("Lag-3 sample: CPD at t-3 (no window overlap)", "est")),
-  se = c(g("M2", "lcpd", "se"), g("M3", "lcpd", "se"), num$avg5_se, num$avg7_se, g("M4", "lcpd", "se"),
+  se = c(g("M2", "lcpd", "se"), g("M3", "lcpd", "se"), num$avg5_se, num$avg6_se, g("M4", "lcpd", "se"),
          r("Lag-3 sample: CPD at t-3 (no window overlap)", "se")),
   kind = c(rep("Static specifications", 4), rep("Dynamic or longer lag", 2)))
 f1[, lab := factor(lab, levels = rev(lab))]
@@ -80,7 +82,7 @@ pa <- ggplot(pp, aes(year, idx, color = spec, linetype = spec)) +
   geom_line(linewidth = 0.6) + geom_point(size = 1.0) +
   scale_color_manual(values = cols) + scale_linetype_manual(values = ltys) +
   scale_x_continuous(breaks = c(2005, 2010, 2015, 2020, 2025)) +
-  labs(x = NULL, y = "Slope on scaled CPD\n(2005 = 100)", title = "A. Slope on scaled CPD by year under four scalings") +
+  labs(x = NULL, y = "Slope on scaled CPD\n(2005 = 100)", title = "a") +
   guides(color = guide_legend(ncol = 2), linetype = guide_legend(ncol = 2)) + th
 ## Panels B-C: same positive-CPD sample, observation-level group values, deviations from the sample average
 gd <- fread(O("lc_group_devs.csv"))[level == "field" & sk %in% c("log", "l1p")]
@@ -109,7 +111,7 @@ LB <- data.table(group = c("Arts and Humanities", "Veterinary", "Chemistry", "So
                  lx = c(0.035, -0.075, -0.215, 0.06, 0.185, 0.04, -0.055),
                  ly = c(-0.14, -0.085, -0.065, -0.045, -0.016, 0.106, 0.104),
                  hj = c(0, 0, 0, 0, 1, 0, 1))
-pb <- sc_pts(w, "dev_l1p", "dev_log", LB, sprintf("B. Coefficients as estimated (r = %.2f)", rcor),
+pb <- sc_pts(w, "dev_l1p", "dev_log", LB, "b",
              "log(1 + CPD) coefficient, deviation", "log(CPD) elasticity,\ndeviation")
 cv <- w
 rconv <- cv[, cor(dev_c, dev_log)]
@@ -117,7 +119,7 @@ LC <- data.table(group = LB$group,
                  lx = c(-0.165, -0.09, 0.015, -0.065, 0.07, 0.165, 0.115),
                  ly = c(-0.18, -0.085, -0.075, -0.03, -0.022, 0.14, 0.108),
                  hj = c(0, 1, 0, 1, 0, 1, 1))
-pc <- sc_pts(cv, "dev_c", "dev_log", LC, sprintf("C. Converted to elasticities (r = %.2f)", rconv),
+pc <- sc_pts(cv, "dev_c", "dev_log", LC, "c",
              "Converted elasticity, deviation", "log(CPD) elasticity,\ndeviation", diag = TRUE)
 lim <- c(-0.235, 0.165)
 pc <- pc + coord_cartesian(xlim = lim, ylim = lim)
@@ -126,12 +128,12 @@ ggsave(file.path(FIG, "fig3_scaling.png"), p3, width = W, height = 9.2, dpi = DP
 jsonlite::write_json(list(field_dev_cor_log_l1p = rcor, field_conv_cor = rconv), O("lc_fig_numbers.json"), auto_unbox = TRUE, digits = 10)
 
 ## ---- Figure 4: publisher deviations (log CPD) ---------------------------
-d7 <- fread(O("lc_dev_m7.csv")); d7f <- fread(O("lc_dev_m7f.csv"))
-t7 <- rbind(d7[, .(group, dev, se, dir, spec = "Publisher slopes only")], d7f[, .(group, dev, se, dir, spec = "Net of the 27 field slopes")])
-t7[, group := factor(group, levels = d7[order(dev), group])]
-t7[, spec := factor(spec, levels = c("Publisher slopes only", "Net of the 27 field slopes"))]
-t7[, dir := factor(dir, levels = c("above", "below", "n.s."))]
-p4 <- ggplot(t7, aes(dev, group, color = dir, shape = spec)) + geom_vline(xintercept = 0, color = INK, linewidth = 0.45) +
+d6 <- fread(O("lc_dev_m6.csv")); d6f <- fread(O("lc_dev_m6f.csv"))
+t6 <- rbind(d6[, .(group, dev, se, dir, spec = "Publisher slopes only")], d6f[, .(group, dev, se, dir, spec = "Net of the 27 field slopes")])
+t6[, group := factor(group, levels = d6[order(dev), group])]
+t6[, spec := factor(spec, levels = c("Publisher slopes only", "Net of the 27 field slopes"))]
+t6[, dir := factor(dir, levels = c("above", "below", "n.s."))]
+p4 <- ggplot(t6, aes(dev, group, color = dir, shape = spec)) + geom_vline(xintercept = 0, color = INK, linewidth = 0.45) +
   geom_errorbarh(aes(xmin = dev - 1.96 * se, xmax = dev + 1.96 * se), height = 0, linewidth = 0.5, position = position_dodge(width = 0.72)) +
   geom_point(size = 1.7, position = position_dodge(width = 0.72)) +
   scale_color_manual(values = dircol, labels = dirlab, drop = FALSE) +

@@ -16,8 +16,7 @@
 ##   C  field (M5) and publisher (M6, M6 + fields) deviations
 ##   D  robustness of the citation elasticity
 ##   E  between-journal elasticity on journal means (Section 2.4)
-##   F  density moderation (M7) with alternative clustering
-##   G  sample including journals indexed from 1996 or earlier
+##   F  sample including journals indexed from 1996 or earlier
 ## Run after 1_build_panel.R.
 ## =============================================================
 suppressMessages({library(data.table); library(plm); library(lmtest); library(sandwich); library(stringr)})
@@ -154,15 +153,15 @@ cat(sprintf("persistence: pooled %.3f FE %.3f halves %.3f %.3f jackknife %.3f (S
 
 ## ---------- C. field and publisher deviations (log CPD) ---------------
 m5 <- fe(ix("lcpd", "ldocs", fv)); dv5 <- deviations(m5, "lcpd", fv, fields$field)
-m7 <- fe(ix("lcpd", "ldocs", pv)); dv7 <- deviations(m7, "lcpd", pv, pubs$publisher)
-m7f <- fe(ix("lcpd", "ldocs", c(pv, fv))); dv7f <- deviations(m7f, "lcpd", pv, pubs$publisher)
-for (k in c("5", "7", "7f")) { dv <- get(paste0("dv", k)); fwrite(dv$tab, O(paste0("lc_dev_m", k, ".csv")))
+m6 <- fe(ix("lcpd", "ldocs", pv)); dv6 <- deviations(m6, "lcpd", pv, pubs$publisher)
+m6f <- fe(ix("lcpd", "ldocs", c(pv, fv))); dv6f <- deviations(m6f, "lcpd", pv, pubs$publisher)
+for (k in c("5", "6", "6f")) { dv <- get(paste0("dv", k)); fwrite(dv$tab, O(paste0("lc_dev_m", k, ".csv")))
   put(paste0("avg", k), dv$avg); put(paste0("avg", k, "_se"), dv$avg_se)
   put(paste0("above", k), dv$tab[dir == "above", .N]); put(paste0("below", k), dv$tab[dir == "below", .N]) }
-put("cor5", dv5$tab[, cor(dev, mean_cpd)]); put("cor7", dv7$tab[, cor(dev, mean_cpd)])
-put("ref7_j", d[rowSums(d[, ..pv]) == 0, uniqueN(src_id)]); put("ref7_cpd", d[rowSums(d[, ..pv]) == 0, mean(cpd_l1)])
-put("in7_cpd", d[rowSums(d[, ..pv]) > 0, mean(cpd_l1)]); put("mean_fields", mean(rowSums(as.matrix(d[, ..fv]))))
-print(dv5$tab, digits = 3); print(dv7$tab, digits = 3); print(dv7f$tab, digits = 3)
+put("cor5", dv5$tab[, cor(dev, mean_cpd)]); put("cor6", dv6$tab[, cor(dev, mean_cpd)])
+put("ref6_j", d[rowSums(d[, ..pv]) == 0, uniqueN(src_id)]); put("ref6_cpd", d[rowSums(d[, ..pv]) == 0, mean(cpd_l1)])
+put("in6_cpd", d[rowSums(d[, ..pv]) > 0, mean(cpd_l1)]); put("mean_fields", mean(rowSums(as.matrix(d[, ..fv]))))
+print(dv5$tab, digits = 3); print(dv6$tab, digits = 3); print(dv6f$tab, digits = 3)
 
 ## ---------- D. robustness of the elasticity -----------------------------
 rob <- list(); addr <- function(lab, f, term) { k <- ct(f); rob[[lab]] <<- data.table(spec = lab, est = k[term, 1], se = k[term, 2], p = k[term, 4], n = f$n) }
@@ -190,33 +189,7 @@ bm <- bfit(paste("ldocs + nyears + lcpd +", fld), be, "Between: mean log CPD + s
 fwrite(data.table(term = rownames(bm$k), bm$k[, c(1, 2, 4)]), O("lc_table_between_main.csv"))
 put("be_n", bm$n); put("be_r2", bm$r2)
 
-## ---------- F. density moderation (M7) ------------------------------------
-G <- as.matrix(d[, ..fv]); nf <- rowSums(G); d[, lrpd := log(pmax(rpd_l1, 0.5))]
-fymean <- function(col) { M <- sapply(seq_along(fv), function(j) { fy <- d[G[, j] == 1, .(v = mean(get(col))), by = year]
-  fy$v[match(d$year, fy$year)] }); M[is.na(M)] <- 0; rowSums(G * M) / nf }
-d[, dens := fymean("lcpd")]; d[, refd := fymean("lrpd")]
-d[, `:=`(dens_c = dens - mean(dens), refd_c = refd - mean(refd), lsq = (lcpd - mean(lcpd))^2)]
-put("dens_sd", sd(d$dens)); put("refd_sd", sd(d$refd))
-yrs <- sort(unique(d$year))[-1]; for (y in yrs) d[, (paste0("ly", y)) := lcpd * (year == y)]; ly <- paste0("ly", yrs)
-d[, fyc := paste(pfield, year)]
-m8rows <- list()
-for (dv in c("dens_c", "refd_c")) for (spec in c("pooled", "field", "strict")) {
-  extra <- switch(spec, pooled = character(), field = paste0("lcpd:", fv), strict = c(paste0("lcpd:", fv), ly, "lsq"))
-  f <- fe(as.formula(paste("log_sjr ~ ldocs + lcpd +", dv, "+", paste0("lcpd:", dv), if (length(extra)) paste("+", paste(extra, collapse = " + ")))))
-  term <- paste0("lcpd:", dv); b <- coef(f$m)[term]
-  se_j <- sqrt(f$V[term, term])
-  if (spec == "strict") {
-    Vf <- vc_cl(f, d$pfield); Vy <- vc_cl(f, as.character(d$year)); Vjy <- vc_cl(f, paste(d$src_id, d$year)); Vj <- vc_cl(f, as.character(d$src_id))
-    Vfy <- vc_cl(f, d$fyc); V2 <- Vj + Vy - Vjy
-    se_f <- sqrt(Vf[term, term]); se_2 <- sqrt(max(V2[term, term], 0)); se_fy <- sqrt(Vfy[term, term])
-  } else { se_f <- se_2 <- se_fy <- NA_real_ }
-  m8rows[[paste(dv, spec)]] <- data.table(density = ifelse(dv == "dens_c", "Citation density (mean log CPD)", "Referencing density (mean log RPD)"),
-    spec = spec, est = b, se_journal = se_j, se_field = se_f, se_twoway = se_2, se_field_year = se_fy, within_r2 = f$r2)
-  cat("M7", dv, spec, round(b, 4), round(se_j, 4), round(se_f, 4), "\n")
-}
-m8 <- rbindlist(m8rows); print(m8, digits = 4); fwrite(m8, O("lc_table_density.csv"))
-
-## ---------- G. including journals indexed from 1996 or earlier ------------
+## ---------- F. including journals indexed from 1996 or earlier ------------
 p <- readRDS(O("sjr_panel_full.rds"))
 p <- p[src_type %in% c("journal", "trade journal") & !is.na(quart) & !quart %in% c("", "-")]
 setorder(p, src_id, year); p[, log_sjr := log(sjr + 0.001)]

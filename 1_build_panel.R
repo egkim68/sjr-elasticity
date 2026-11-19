@@ -226,7 +226,7 @@ m <- model_dt
 fields <- fread(O("field_vars.csv")); fv <- fields$var
 keep <- c("src_id","year","log_sjr","log_sjr_l1","docs_l1","cpd_l1","rpd_l1","nyears_l1","cpd","areas", fv)
 fwrite(m[, ..keep], O("est_sample.csv"))
-## sample including early journals (used for the density check in 4_fe_checks.py)
+## sample including early journals (used for the composition checks in 4_fe_checks.py)
 p <- readRDS(O("sjr_panel_full.rds"))
 p <- p[src_type %in% c("journal","trade journal") & !is.na(quart) & !quart %in% c("","-")]
 setorder(p, src_id, year)

@@ -1,8 +1,7 @@
 """4_fe_checks.py
 Two checks estimated with pyfixest. Run after 1_build_panel.R and 2_models.R.
   (a) primary field x year fixed effects (Table 8, Section 3.5)
-  (b) density moderation (M7, strict) including journals indexed from 1996 or earlier
-  (c) composition checks: year slopes on journals observed in every year; field deviations with early journals
+  (b) composition checks: year slopes on journals observed in every year; field deviations with early journals
 """
 import os, json, gc, warnings
 import numpy as np, pandas as pd, pyfixest as pf
@@ -42,35 +41,13 @@ print({k: out[k] for k in ("fy_2005", "fy_2025", "fy_l1p_2005", "fy_l1p_2025")})
 out["n_pfield"] = int(pos.pfield.nunique())
 json.dump(out, open(ROOT + "lc_field_year_fe.json", "w"), indent=1)
 
-# ---------- (b) density moderation including early journals
+# ---------- (b) composition checks (Section 3.5)
 def prep(path):
     d = pd.read_csv(path); fv = [c for c in d.columns if c.startswith("field_")]
     d["fe_id"] = d.src_id.astype(str); d["ldocs"] = np.log1p(d.docs_l1)
     d = d[d.cpd_l1 > 0].copy(); d["lcpd"] = np.log(d.cpd_l1)
-    G = d[fv].values.astype(float); nf = np.maximum(G.sum(1), 1)
-    dens = np.zeros(len(d)); refd = np.zeros(len(d)); d["lrpd"] = np.log(d.rpd_l1.clip(lower=0.5))
-    for j, f in enumerate(fv):
-        m = d[f] == 1
-        dens += G[:, j] * d.year.map(d[m].groupby("year").lcpd.mean()).fillna(0).values
-        refd += G[:, j] * d.year.map(d[m].groupby("year").lrpd.mean()).fillna(0).values
-    d["dens_c"] = dens / nf; d["dens_c"] -= d.dens_c.mean(); d["ref_c"] = refd / nf; d["ref_c"] -= d.ref_c.mean()
-    d["lsq"] = (d.lcpd - d.lcpd.mean())**2
-    # cluster id for field-clustered SEs: first of the journal's fields in field_vars order
-    d["pfield"] = np.argmax(G, axis=1).astype(str); d["fy"] = d.pfield + "_" + d.year.astype(str)
-    yrs = sorted(d.year.unique())[1:]
-    for y in yrs: d[f"ly{y}"] = d.lcpd * (d.year == y)
-    return d, fv, yrs
-full, fvf, yrsf = prep(ROOT + "full_sample.csv")
-fif = " + ".join(f"lcpd:{f}" for f in fvf); lyf = " + ".join(f"ly{y}" for y in yrsf)
-out = {}
-for dv in ["dens_c", "ref_c"]:
-    m = pf.feols(f"log_sjr ~ ldocs + lcpd + {dv} + lcpd:{dv} + lsq + {fif} + {lyf} | fe_id + year", data=full, vcov={"CRV1": "fe_id"})
-    t = m.tidy().loc[f"lcpd:{dv}"]; out[dv] = {"est": t.Estimate, "se_journal": t["Std. Error"]}
-    m.vcov({"CRV1": "pfield"}); t = m.tidy().loc[f"lcpd:{dv}"]; out[dv]["se_field"] = t["Std. Error"]; out[dv]["p_field"] = t["Pr(>|t|)"]
-    print(dv, out[dv], flush=True); del m; gc.collect()
-json.dump(out, open(ROOT + "lc_full_density.json", "w"), indent=1)
-
-# ---------- (c) composition checks (Section 3.5)
+    return d, fv
+full, fvf = prep(ROOT + "full_sample.csv")
 out = {}
 def year_slopes(d):
     yrs = sorted(d.year.unique())[1:]
