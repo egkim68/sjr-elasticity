@@ -29,7 +29,7 @@ main <- fread(O("lc_table_main.csv")); rob <- fread(O("lc_table_robustness.csv")
 g <- function(m, t, c) main[model == m & term == t][[c]]
 r <- function(s, c) rob[spec == s][[c]]
 f1 <- data.table(
-  lab = c("M2 Performance", "M3 Extended", "M5 Field (sample average)", "M7 Publisher (sample average)",
+  lab = c("M2 Performance", "M3 Extended", "M5 Field (sample average)", "M6 Publisher (sample average)",
           "M4 Dynamic (short-run)", "CPD lagged three years"),
   est = c(g("M2", "lcpd", "est"), g("M3", "lcpd", "est"), num$avg5, num$avg7, g("M4", "lcpd", "est"),
           r("Lag-3 sample: CPD at t-3 (no window overlap)", "est")),
@@ -80,7 +80,7 @@ pa <- ggplot(pp, aes(year, idx, color = spec, linetype = spec)) +
   geom_line(linewidth = 0.6) + geom_point(size = 1.0) +
   scale_color_manual(values = cols) + scale_linetype_manual(values = ltys) +
   scale_x_continuous(breaks = c(2005, 2010, 2015, 2020, 2025)) +
-  labs(x = NULL, y = "Slope on scaled CPD (2005 = 100)", title = "A. Slope on scaled CPD by year under four scalings") +
+  labs(x = NULL, y = "Slope on scaled CPD\n(2005 = 100)", title = "A. Slope on scaled CPD by year under four scalings") +
   guides(color = guide_legend(ncol = 2), linetype = guide_legend(ncol = 2)) + th
 ## Panels B-C: same positive-CPD sample, observation-level group values, deviations from the sample average
 gd <- fread(O("lc_group_devs.csv"))[level == "field" & sk %in% c("log", "l1p")]
@@ -106,23 +106,23 @@ sc_pts <- function(dt, xv, yv, lab_pos, ttl, xl, yl, diag = FALSE) {
 }
 LB <- data.table(group = c("Arts and Humanities", "Veterinary", "Chemistry", "Social Sciences", "Nursing", "Neuroscience",
                            "Biochemistry, Genetics and Molecular Biology"),
-                 lx = c(0.10, -0.13, -0.235, 0.10, 0.205, 0.10, -0.15),
-                 ly = c(-0.128, -0.088, -0.122, -0.068, -0.010, 0.110, 0.104),
-                 hj = c(0.5, 0.5, 0, 0.5, 1, 0.5, 0.5))
-pb <- sc_pts(w, "dev_l1p", "dev_log", LB, sprintf("B. Coefficients as estimated\n(r = %.2f)", rcor),
-             "log(1 + CPD) coefficient, deviation", "log(CPD) elasticity, deviation")
+                 lx = c(0.035, -0.075, -0.215, 0.06, 0.185, 0.04, -0.055),
+                 ly = c(-0.14, -0.085, -0.065, -0.045, -0.016, 0.106, 0.104),
+                 hj = c(0, 0, 0, 0, 1, 0, 1))
+pb <- sc_pts(w, "dev_l1p", "dev_log", LB, sprintf("B. Coefficients as estimated (r = %.2f)", rcor),
+             "log(1 + CPD) coefficient, deviation", "log(CPD) elasticity,\ndeviation")
 cv <- w
 rconv <- cv[, cor(dev_c, dev_log)]
 LC <- data.table(group = LB$group,
-                 lx = c(-0.17, -0.165, 0.02, -0.15, 0.07, 0.10, -0.03),
-                 ly = c(-0.195, -0.075, -0.09, -0.015, -0.005, 0.135, 0.10),
-                 hj = c(0, 0.5, 0, 0.5, 0, 0.5, 0.5))
-pc <- sc_pts(cv, "dev_c", "dev_log", LC, sprintf("C. Converted to elasticities\n(r = %.2f)", rconv),
-             "Converted elasticity, deviation", "log(CPD) elasticity, deviation", diag = TRUE)
+                 lx = c(-0.165, -0.09, 0.015, -0.065, 0.07, 0.165, 0.115),
+                 ly = c(-0.18, -0.085, -0.075, -0.03, -0.022, 0.14, 0.108),
+                 hj = c(0, 1, 0, 1, 0, 1, 1))
+pc <- sc_pts(cv, "dev_c", "dev_log", LC, sprintf("C. Converted to elasticities (r = %.2f)", rconv),
+             "Converted elasticity, deviation", "log(CPD) elasticity,\ndeviation", diag = TRUE)
 lim <- c(-0.235, 0.165)
 pc <- pc + coord_cartesian(xlim = lim, ylim = lim)
-p3 <- pa / plot_spacer() / (pb + plot_spacer() + pc + plot_layout(widths = c(1, 0.06, 1))) + plot_layout(heights = c(1, 0.08, 1.15))
-ggsave(file.path(FIG, "fig3_scaling.png"), p3, width = W, height = 7.8, dpi = DPI, bg = "white")
+p3 <- pa / plot_spacer() / pb / plot_spacer() / pc + plot_layout(heights = c(1.1, 0.05, 1, 0.05, 1))
+ggsave(file.path(FIG, "fig3_scaling.png"), p3, width = W, height = 9.2, dpi = DPI, bg = "white")
 jsonlite::write_json(list(field_dev_cor_log_l1p = rcor, field_conv_cor = rconv), O("lc_fig_numbers.json"), auto_unbox = TRUE, digits = 10)
 
 ## ---- Figure 4: publisher deviations (log CPD) ---------------------------

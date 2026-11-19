@@ -8,19 +8,6 @@ source("config.R")
 YEARS <- 2004:2025
 
 ## ---------- helpers
-split_issns <- function(x) {
-  x <- str_split(x, "[,;]")[[1]]
-  x <- str_trim(x)
-  x <- str_replace_all(x, "-", "")
-  x[x != ""]
-}
-
-norm_title <- function(x) {
-  x <- tolower(x)
-  x <- str_replace_all(x, "[^a-z0-9]+", " ")
-  str_trim(x)
-}
-
 read_sjr_year <- function(path, year) {
   dt <- fread(
     path,
@@ -58,70 +45,6 @@ for (y in YEARS) {
 
 main_all <- rbindlist(main_list, use.names = TRUE, fill = TRUE)
 rm(main_list)
-
-## ---------- read the open-access lists
-oa_list <- vector("list", length(YEARS))
-names(oa_list) <- YEARS
-
-for (y in YEARS) {
-  f <- file.path(DATA_DIR, "sjr_OA", sprintf("sjr%d_OA.csv", y))
-  if (!file.exists(f)) {
-    warning(sprintf("OA file missing for %d, skipping: %s", y, f))
-    next
-  }
-  dt <- read_sjr_year(f, y)
-  oa_list[[as.character(y)]] <- dt
-}
-
-oa_all <- rbindlist(oa_list, use.names = TRUE, fill = TRUE)
-rm(oa_list)
-## without the sjr_OA/ folder, the native "Open Access" flag is used instead
-OA_FILES_PRESENT <- nrow(oa_all) > 0
-
-## ---------- OA status: match each year's OA list by ISSN, then by title
-build_issn_lookup <- function(dt) {
-  out <- dt[, .(issn = split_issns(Issn)), by = .(year, Sourceid, Title)]
-  out
-}
-
-if (OA_FILES_PRESENT) {
-main_issn_long <- build_issn_lookup(main_all)
-oa_issn_long   <- build_issn_lookup(oa_all)
-
-oa_issn_key <- unique(oa_issn_long[, .(year, issn)])
-oa_issn_key[, oa_by_issn := TRUE]
-
-main_issn_long <- merge(main_issn_long, oa_issn_key,
-                         by = c("year", "issn"), all.x = TRUE)
-
-matched_by_issn <- unique(
-  main_issn_long[oa_by_issn == TRUE, .(year, Sourceid)]
-)
-matched_by_issn[, oa_by_issn := TRUE]
-
-main_all[, title_norm := norm_title(Title)]
-oa_all[,   title_norm := norm_title(Title)]
-
-oa_title_key <- unique(oa_all[, .(year, title_norm)])
-oa_title_key[, oa_by_title := TRUE]
-
-main_all <- merge(main_all, oa_title_key,
-                   by = c("year", "title_norm"), all.x = TRUE)
-main_all <- merge(main_all, matched_by_issn,
-                   by = c("year", "Sourceid"), all.x = TRUE)
-
-main_all[, oa_status := fifelse(
-  !is.na(oa_by_issn) | !is.na(oa_by_title), 1L, 0L
-)]
-main_all[, c("oa_by_issn", "oa_by_title", "title_norm") := NULL]
-} else {
-  cat("sjr_OA/ files not found: using the native 'Open Access' flag as oa_status\n")
-  main_all[, oa_status := fifelse(`Open Access` == "Yes", 1L, 0L)]
-}
-
-## agreement with the native "Open Access" flag, by year file (reported in Section 2.2)
-main_all[, oa_native := fifelse(`Open Access` == "Yes", 1L, 0L)]
-print(main_all[, .(agree_rate = mean(oa_status == oa_native, na.rm = TRUE)), by = year][order(year)])
 
 ## ---------- short variable names and numeric conversion
 old_names <- c(

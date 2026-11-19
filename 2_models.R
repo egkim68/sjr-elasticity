@@ -13,10 +13,10 @@
 ## Sections
 ##   A  scaling comparison: the same quantities under five scalings
 ##   B  M1-M4 (journal + year FE), Mundlak tests, persistence
-##   C  field (M5) and publisher (M7, M7 + fields) deviations
+##   C  field (M5) and publisher (M6, M6 + fields) deviations
 ##   D  robustness of the citation elasticity
-##   E  between effects (M6), open access
-##   F  density moderation (M8) with alternative clustering
+##   E  between-journal elasticity on journal means (Section 2.4)
+##   F  density moderation (M7) with alternative clustering
 ##   G  sample including journals indexed from 1996 or earlier
 ## Run after 1_build_panel.R.
 ## =============================================================
@@ -180,25 +180,17 @@ rob_tab <- rbindlist(rob); print(rob_tab, digits = 4); fwrite(rob_tab, O("lc_tab
 d[, late := as.integer(year >= 2015)]; lt <- ct(fe(log_sjr ~ ldocs + lcpd + lcpd:late))
 put("late_int", lt["lcpd:late", 1]); put("late_int_se", lt["lcpd:late", 2]); put("late_int_p", lt["lcpd:late", 4])
 
-## ---------- E. between effects (OA) -------------------------------------
-be <- d[, c(list(log_sjr = mean(log_sjr), ldocs = mean(ldocs), nyears = mean(nyears_l1), lcpd = mean(lcpd),
-                 oa = first(oa_status)), lapply(.SD, max)), by = src_id, .SDcols = fv]
-## the scaling variants use the same journals and the same controls; only the citation term changes
-be[, `:=`(l1p = d[, mean(log1p(cpd_l1)), by = src_id]$V1, cpd = d[, mean(cpd_l1), by = src_id]$V1)]
+## ---------- E. between-journal elasticity (Section 2.4) -----------------
+be <- d[, c(list(log_sjr = mean(log_sjr), ldocs = mean(ldocs), nyears = mean(nyears_l1), lcpd = mean(lcpd)),
+                 lapply(.SD, max)), by = src_id, .SDcols = fv]
 fld <- paste(fv, collapse = " + ")
 bfit <- function(rhs, data, lab) { l <- lm(as.formula(paste("log_sjr ~", rhs)), data); k <- coeftest(l, vcov = vcovHC(l, type = "HC3"))
   list(lab = lab, k = k, r2 = summary(l)$r.squared, n = nobs(l)) }
-bm <- bfit(paste("ldocs + nyears + lcpd + oa +", fld), be, "M6: mean log CPD + subject areas")
-bl <- list(bm, bfit("ldocs + nyears + lcpd + oa", be, "Mean log CPD, no subject areas"),
-           bfit(paste("ldocs + nyears + oa +", fld), be, "No CPD, subject areas"),
-           bfit(paste("ldocs + nyears + l1p + oa +", fld), be, "Mean log(1 + CPD), subject areas"),
-           bfit(paste("ldocs + nyears + cpd + oa +", fld), be, "Mean raw CPD, subject areas"))
-be_tab <- rbindlist(lapply(bl, function(b) data.table(spec = b$lab, oa = b$k["oa", 1], oa_se = b$k["oa", 2], oa_p = b$k["oa", 4], r2 = b$r2, n = b$n)))
-print(be_tab, digits = 4); fwrite(be_tab, O("lc_table_between_oa.csv"))
+bm <- bfit(paste("ldocs + nyears + lcpd +", fld), be, "Between: mean log CPD + subject areas")
 fwrite(data.table(term = rownames(bm$k), bm$k[, c(1, 2, 4)]), O("lc_table_between_main.csv"))
 put("be_n", bm$n); put("be_r2", bm$r2)
 
-## ---------- F. density moderation (M8) ------------------------------------
+## ---------- F. density moderation (M7) ------------------------------------
 G <- as.matrix(d[, ..fv]); nf <- rowSums(G); d[, lrpd := log(pmax(rpd_l1, 0.5))]
 fymean <- function(col) { M <- sapply(seq_along(fv), function(j) { fy <- d[G[, j] == 1, .(v = mean(get(col))), by = year]
   fy$v[match(d$year, fy$year)] }); M[is.na(M)] <- 0; rowSums(G * M) / nf }
@@ -220,7 +212,7 @@ for (dv in c("dens_c", "refd_c")) for (spec in c("pooled", "field", "strict")) {
   } else { se_f <- se_2 <- se_fy <- NA_real_ }
   m8rows[[paste(dv, spec)]] <- data.table(density = ifelse(dv == "dens_c", "Citation density (mean log CPD)", "Referencing density (mean log RPD)"),
     spec = spec, est = b, se_journal = se_j, se_field = se_f, se_twoway = se_2, se_field_year = se_fy, within_r2 = f$r2)
-  cat("M8", dv, spec, round(b, 4), round(se_j, 4), round(se_f, 4), "\n")
+  cat("M7", dv, spec, round(b, 4), round(se_j, 4), round(se_f, 4), "\n")
 }
 m8 <- rbindlist(m8rows); print(m8, digits = 4); fwrite(m8, O("lc_table_density.csv"))
 

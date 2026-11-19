@@ -1,7 +1,7 @@
 """4_fe_checks.py
 Two checks estimated with pyfixest. Run after 1_build_panel.R and 2_models.R.
-  (a) primary field x year fixed effects (Table 9, Section 3.6)
-  (b) density moderation (M8, strict) including journals indexed from 1996 or earlier
+  (a) primary field x year fixed effects (Table 8, Section 3.5)
+  (b) density moderation (M7, strict) including journals indexed from 1996 or earlier
   (c) composition checks: year slopes on journals observed in every year; field deviations with early journals
 """
 import os, json, gc, warnings
@@ -70,7 +70,7 @@ for dv in ["dens_c", "ref_c"]:
     print(dv, out[dv], flush=True); del m; gc.collect()
 json.dump(out, open(ROOT + "lc_full_density.json", "w"), indent=1)
 
-# ---------- (c) composition checks (Section 3.6)
+# ---------- (c) composition checks (Section 3.5)
 out = {}
 def year_slopes(d):
     yrs = sorted(d.year.unique())[1:]

@@ -109,11 +109,10 @@ out <- rbindlist(lapply(names(v), function(n) { x <- v[[n]]; data.table(variable
 print(out); fwrite(out, O("lc_table_descriptives.csv"))
 setorder(d, src_id, year)
 inc <- d[, .(dd = diff(nyears_l1), dy = diff(year)), by = src_id][dy == 1]
-oa_j <- d[, .(oa = oa_status[1]), by = src_id][, mean(oa)]
 ly <- d[, .(m = mean(log_sjr)), by = year][order(year)]
 # zero-CPD journals: describe
 z <- d0[cpd_l1 == 0]; zf <- d0[, .(any0 = any(cpd_l1 == 0), all0 = all(cpd_l1 == 0)), by = src_id]
-res <- list(nyears_inc1 = inc[, mean(dd == 1)], oa_share_j = oa_j, logsjr_2005 = ly[year == 2005, m], logsjr_2025 = ly[year == 2025, m],
+res <- list(nyears_inc1 = inc[, mean(dd == 1)], logsjr_2005 = ly[year == 2005, m], logsjr_2025 = ly[year == 2025, m],
   zero_j_any = zf[, sum(any0)], zero_j_all = zf[, sum(all0)], zero_mean_sjr = z[, mean(exp(log_sjr) - .001)], pos_mean_sjr = d[, mean(exp(log_sjr) - .001)],
   zero_share_ah = NA)
 ## zero shares by period and field (written below)

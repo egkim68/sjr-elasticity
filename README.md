@@ -1,14 +1,13 @@
-# What Does SCImago Journal Rank Reward?
+# How Closely Does SCImago Journal Rank Track Citations?
 
-Code for: Kim, E. *What Does SCImago Journal Rank Reward? Within-Journal Citation Elasticity Across Fields, Publishers, and Years, 2004–2025*. Research Evaluation (under review).
+Code for: Kim, E. *How Closely Does SCImago Journal Rank Track Citations? Within-Journal Citation Elasticity Across Fields, Publishers, and Years, 2004–2025*. Scientometrics (under review).
 
 ## Data
 
 Download the yearly files from [SCImago Journal & Country Rank](https://www.scimagojr.com/journalrank.php) and put them in `data/`:
 
 ```
-data/sjr2004.csv ... data/sjr2025.csv                 all journals
-data/sjr_OA/sjr2004_OA.csv ... sjr_OA/sjr2025_OA.csv  "Only Open Access Journals" filter (optional)
+data/sjr2004.csv ... data/sjr2025.csv
 ```
 
 Or copy the `built/` folder of the data deposit to `data/built/` and start at step 2.
@@ -17,7 +16,7 @@ Or copy the `built/` folder of the data deposit to `data/built/` and start at st
 
 ```
 Rscript 1_build_panel.R      # panel and samples
-Rscript 2_models.R           # Models M1–M8, scalings, robustness
+Rscript 2_models.R           # Models M1–M7, scalings, robustness
 Rscript 3_scaling_checks.R   # conversion to elasticities, publisher gap
 python  4_fe_checks.py       # field × year fixed effects, composition checks
 Rscript 5_figures.R          # Figures 1–4
