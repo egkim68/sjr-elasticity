@@ -1,6 +1,6 @@
 # How Closely Does SCImago Journal Rank Track Citations?
 
-Code for: Kim, E. *How Closely Does SCImago Journal Rank Track Citations? Within-Journal Citation Elasticity Across Fields, Publishers, and Years, 2004–2025*.
+Code for: Kim, E. *How Closely Does SCImago Journal Rank Track Citations? Within-Journal Citation Elasticity Across Fields, Publishers, and Years*.
 
 ## Data
 
