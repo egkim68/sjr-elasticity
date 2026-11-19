@@ -1,7 +1,8 @@
 """4_fe_checks.py
-Two checks estimated with pyfixest. Run after 1_build_panel.R and 2_models.R.
+Three checks estimated with pyfixest. Run after 1_build_panel.R and 2_models.R.
   (a) primary field x year fixed effects (Table 8, Section 3.5)
   (b) composition checks: year slopes on journals observed in every year; field deviations with early journals
+  (c) journal size: elasticity by size quartile, document weights, larger journals, large-publisher gap net of size
 """
 import os, json, gc, warnings
 import numpy as np, pandas as pd, pyfixest as pf
@@ -66,3 +67,20 @@ early = full[full.src_id.isin(set(pos.src_id)) | (full.pre1996 == 1)]
 a, e = field_devs(main.copy(), fvf), field_devs(early.copy(), fvf)
 out["early_r"] = float(np.corrcoef(a, e)[0, 1]); out["early_sign_agree"] = int((np.sign(a) == np.sign(e)).sum())
 print(out); json.dump(out, open(ROOT + "lc_composition.json", "w"), indent=1)
+
+# ---------- (c) journal size (Table 8, Section 3.5)
+out = {}
+pos["jsize"] = pos.groupby("src_id").docs_l1.transform("median")
+pos["ls"] = np.log1p(pos.jsize); pos["ls"] -= pos.ls.mean(); pos["lcpd_ls"] = pos.lcpd * pos.ls
+pos["sq"] = pd.qcut(pos.jsize, 4, labels=False)
+for q in range(4):
+    s = pos[pos.sq == q]; est("log_sjr ~ ldocs + lcpd | fe_id + year", s, "lcpd", f"size_q{q + 1}")
+    out[f"size_q{q + 1}"]["jsize_range"] = [float(s.jsize.min()), float(s.jsize.max())]
+pos["w"] = pos.docs_l1.clip(lower=1)
+m = pf.feols("log_sjr ~ ldocs + lcpd | fe_id + year", data=pos, weights="w", vcov={"CRV1": "fe_id"}); t = m.tidy().loc["lcpd"]
+out["weighted"] = {"est": float(t.Estimate), "se": float(t["Std. Error"]), "n": int(m._N)}; print("weighted", out["weighted"])
+big = pos[pos.jsize >= 50]; est("log_sjr ~ ldocs + lcpd | fe_id + year", big, "lcpd", "size50"); out["size50"]["j"] = int(big.src_id.nunique())
+est("log_sjr ~ ldocs + lcpd + lcpd_named + lcpd_ls | fe_id + year", pos, "lcpd_named", "gap_size")
+for q in range(4):
+    est("log_sjr ~ ldocs + lcpd + lcpd_named | fe_id + year", pos[pos.sq == q], "lcpd_named", f"gap_q{q + 1}")
+json.dump(out, open(ROOT + "lc_size.json", "w"), indent=1)

@@ -202,5 +202,18 @@ put("full_2005", pg[year == 2005, slope]); put("full_2025", pg[year == 2025, slo
 put("full_pre1996_j", p[retro_flag %in% TRUE, uniqueN(src_id)])
 cat("including pre-1996:", fg$n, "obs", fg$J, "journals; elasticity", round(coef(fg$m)["lcpd"], 3), "; 2005", round(pg[year == 2005, slope], 3), "2025", round(pg[year == 2025, slope], 3), "\n")
 
+## ---------- G. journal size (Section 3.5) -----------------------------
+d[, jsize := median(docs_l1), by = src_id]; d[, ls := log1p(jsize) - mean(log1p(jsize))]
+fs <- fe(log_sjr ~ ldocs + lcpd + lcpd:ls); put("size_ls", coef(fs$m)["lcpd:ls"]); put("size_ls_se", sqrt(fs$V["lcpd:ls", "lcpd:ls"]))
+m5s <- fe(ix("lcpd", "ldocs", fv, "lcpd:ls")); dv5s <- deviations(m5s, "lcpd", fv, fields$field)
+m6s <- fe(ix("lcpd", "ldocs", pv, "lcpd:ls")); dv6s <- deviations(m6s, "lcpd", pv, pubs$publisher)
+cmp <- function(a, b) { m <- merge(a$tab, b$tab, by = "group"); cor(m$dev.x, m$dev.y) }
+put("size_r5", cmp(dv5, dv5s)); put("size_r6", cmp(dv6, dv6s))
+put("size_cor5", dv5s$tab[, cor(dev, mean_cpd)]); put("size_cor6", dv6s$tab[, cor(dev, mean_cpd)])
+put("size_ah", dv5s$tab[group == "Arts and Humanities", dev]); put("size_min5", dv5s$tab[which.min(dev), group])
+put("size_dir5", dv5s$tab[, paste(sum(dir == "above"), sum(dir == "below"))]); put("size_dir6", dv6s$tab[, paste(sum(dir == "above"), sum(dir == "below"))])
+cat("size: lcpd:ls", round(coef(fs$m)["lcpd:ls"], 4), "; field r", round(res$size_r5, 3), "cor", round(res$size_cor5, 3),
+    "; publisher r", round(res$size_r6, 3), "cor", round(res$size_cor6, 3), "\n")
+
 jsonlite::write_json(res, O("lc_numbers.json"), auto_unbox = TRUE, digits = 10)
 str(res); sink()

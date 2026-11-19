@@ -16,7 +16,7 @@ data/sjr2004.csv ... data/sjr2025.csv
 Rscript 1_build_panel.R      # panel and samples
 Rscript 2_models.R           # Models M1–M6, scalings, robustness
 Rscript 3_scaling_checks.R   # conversion to elasticities, publisher gap
-python  4_fe_checks.py       # field × year fixed effects, composition checks
+python  4_fe_checks.py       # field × year fixed effects, composition and journal-size checks
 Rscript 5_figures.R          # Figures 1–4
 ```
 
